@@ -12,14 +12,15 @@
   ],
   "scripts": {
     "build": "webpack --config webpack.config.js",
-    "start": "npm-run-all -p start:mockserver start:webpack",
+    "start-old": "npm-run-all -p start:mockserver start:webpack",
+    "start-old:mockserver": "echo 'Do we need mockserver anymore?' &&./node_modules/mockserver/bin/mockserver.js -p 4522 -m './test/mockserver-data'",
+    "start": "npm-run-all -p start:*",
     "start:notice": "echo 'For demo, open https://www.wikipathways.org/wpi/extensions/PathwayFinder/?database=mirtarbase&identifiers=Example%20miRNA%20target%20search:,hsa-miR-148a-3p,hsa-miR-21-3p,hsa-miR-29a-3p,hsa-miR-20a-5p'",
-    "start:mockserver": "echo 'Do we need mockserver anymore?' &&./node_modules/mockserver/bin/mockserver.js -p 4522 -m './test/mockserver-data'",
     "start:webpack": "webpack-dev-server --config webpack.config.js --progress --colors --watch",
     "test": "echo 'add working tests'",
-    "watch": "npm-run-all -p start:mockserver watch:*",
-    "watch:client": "echo 'What is watch:client? Is it outdated/to be deleted?' && npm-watch",
-    "watch:webpack": "npm run start:webpack"
+    "watch-old": "npm-run-all -p start:mockserver watch:*",
+    "watch-old:client": "echo 'What is watch:client? Is it outdated/to be deleted?' && npm-watch",
+    "watch": "npm run start"
   },
   "watch": {
     "test": [
