@@ -1,2 +1,2 @@
 # WikiPathways Pathway Finder
-Your query list -> WikiPathways results, by means of mapping DBs
+Your query list -> WikiPathways results, by means of mapping DBs.
