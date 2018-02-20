@@ -34,16 +34,14 @@ import { fromStream } from "mobx-utils";
 
 import { multiSort } from "./sort";
 
-const geneToPathways = require("../gene-to-pathways.json");
-const miRNAToTargets = require("../miRNA-to-targets.json");
-const pathwayDetails = require("../pathway-details.json");
+const geneToPathways = require("../../build/gene-to-pathways.json");
+const miRNAToTargets = require("../../build/miRNA-to-targets.json");
+const pathwayDetails = require("../../build/pathway-details.json");
 
-//*
 // Needed for onTouchTap
 // http://stackoverflow.com/a/34015469/988941
 import * as injectTapEventPlugin from "react-tap-event-plugin";
 injectTapEventPlugin();
-//*/
 
 const SAMPLE_ID_TO_LABEL_MAPPING = {
   "10768": "AHCYL1",
@@ -440,6 +438,9 @@ class PathwayFinder extends React.Component<any, any> {
   handleControlClick = item => {
     // TODO fix this by using new Pvjs
     this.store.labels = item.children.map(c => SAMPLE_ID_TO_LABEL_MAPPING[c]);
+    this.store.genes = item.children.reduce((acc, c) => {
+      return acc.concat(c);
+    }, []);
     this.store.targetHighlighterSelected = item.id;
   };
 
@@ -457,9 +458,13 @@ class PathwayFinder extends React.Component<any, any> {
       customStyle,
       targetHighlighterSelected,
       selectedPathway,
-      labels
+      labels,
+      genes = []
     } = store;
     const labelAttribute = labels.map(l => `&label[]=${l}`).join("");
+    const xrefAttribute = genes
+      .map(gene => `&xref[]=${gene},Entrez Gene`)
+      .join("");
 
     return (
       <MuiThemeProvider>
@@ -541,7 +546,7 @@ class PathwayFinder extends React.Component<any, any> {
                 {!selectedPathway
                   ? null
                   : <iframe
-                      src={`https://www.wikipathways.org/wpi/PathwayWidget.php?id=${selectedPathway}&label=${labelAttribute}&colors=red`}
+                      src={`https://www.wikipathways.org/wpi/PathwayWidget.php?id=${selectedPathway}${xrefAttribute}&colors=red`}
                       width="800px"
                       height="400px"
                       style={{ overflow: "hidden" }}
@@ -563,7 +568,3 @@ class PathwayFinder extends React.Component<any, any> {
 }
 
 export default PathwayFinder;
-/*
-hsa-miR-21-5p
-hsa-miR-21-3p
-*/

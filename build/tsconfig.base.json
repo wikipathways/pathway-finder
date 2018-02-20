@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "declaration": true,
+    "experimentalDecorators": true,
+    "inlineSourceMap": false,
+    "jsx": "react",
+    "moduleResolution": "node",
+    "noEmitOnError": true,
+    "noImplicitAny": false,
+    "pretty": true
+  },
+  "files": [
+    "./src/build-hash.ts"
+  ],
+  "exclude": [
+    "ui/**/*",
+    "dist/**/*",
+    "tmp/**/*"
+  ]
+}
