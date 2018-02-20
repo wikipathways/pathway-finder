@@ -40,12 +40,12 @@ export class DataTable extends React.Component<any, any> {
     );
   }
 
-  componentDidMount = () => {
+  componentDidMount() {
     const { selectedRows } = this.state;
     this.handleRowSelection(selectedRows);
   };
 
-  componentWillReceiveProps = nextProps => {
+  componentWillReceiveProps(nextProps) {
     const that = this;
     const prevProps = this.props;
     const propsToUpdate = ["data", "count"];

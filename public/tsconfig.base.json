@@ -10,8 +10,7 @@
     "pretty": true
   },
   "files": [
-    "./src/main.tsx",
-    "./react-pivot.d.ts"
+    "./src/main.tsx"
   ],
   "exclude": [
     "ui/**/*",

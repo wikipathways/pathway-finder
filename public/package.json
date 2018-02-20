@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "build": "webpack --config webpack.config.js",
+		"postinstall": "npm run build",
     "start-old": "npm-run-all -p start:mockserver start:webpack",
     "start-old:mockserver": "echo 'Do we need mockserver anymore?' &&./node_modules/mockserver/bin/mockserver.js -p 4522 -m './test/mockserver-data'",
     "start": "npm-run-all -p start:*",
