@@ -4,19 +4,15 @@
   "description": "Your query list -> WikiPathways results, by means of mapping DBs.",
   "main": "main.js",
   "main:esnext": "esnext/main.js",
-  "files": [
-    "index.d.ts",
-    "main.js",
-    "main.d.ts",
-    "esnext/"
-  ],
+  "files": ["index.d.ts", "main.js", "main.d.ts", "esnext/"],
   "scripts": {
     "build": "webpack --config webpack.config.js",
-		"postinstall": "npm run build",
+    "postinstall": "npm run build",
     "start-old": "npm-run-all -p start:mockserver start:webpack",
     "start-old:mockserver": "echo 'Do we need mockserver anymore?' &&./node_modules/mockserver/bin/mockserver.js -p 4522 -m './test/mockserver-data'",
     "start": "npm-run-all -p start:*",
-    "start:notice": "echo 'For demo, open https://www.wikipathways.org/wpi/extensions/PathwayFinder/?database=mirtarbase&identifiers=Example%20miRNA%20target%20search:,hsa-miR-148a-3p,hsa-miR-21-3p,hsa-miR-29a-3p,hsa-miR-20a-5p'",
+    "start:noticelocal": "echo 'For local demo, open http://localhost:8080/webpack-dev-server/?database=mirtarbase&identifiers=Example%20target%20search:,hsa-miR-148a-3p,hsa-miR-21-3p,hsa-miR-29a-3p,hsa-miR-20a-5p'",
+    "start:notice": "echo 'For production demo, open https://www.wikipathways.org/wpi/extensions/PathwayFinder/?database=mirtarbase&identifiers=Example%20target%20search:,hsa-miR-148a-3p,hsa-miR-21-3p,hsa-miR-29a-3p,hsa-miR-20a-5p'",
     "start:webpack": "webpack-dev-server --config webpack.config.js --progress --colors --watch",
     "test": "echo 'add working tests'",
     "watch-old": "npm-run-all -p start:mockserver watch:*",
@@ -24,10 +20,7 @@
     "watch": "npm run start"
   },
   "watch": {
-    "test": [
-      "main.js",
-      "test/*.{js,jsx}"
-    ]
+    "test": ["main.js", "test/*.{js,jsx}"]
   },
   "browser": {
     "commander": false
@@ -36,12 +29,7 @@
     "type": "git",
     "url": "https://github.com/wikipathways/pathway-finder.git"
   },
-  "keywords": [
-    "pathway-finder",
-    "network",
-    "pathway",
-    "biology"
-  ],
+  "keywords": ["pathway-finder", "network", "pathway", "biology"],
   "author": "WikiPathways team",
   "license": "Apache-2.0",
   "bugs": {
@@ -148,11 +136,7 @@
     ],
     "grepOptions": {
       "include": [],
-      "exclude": [
-        ".git",
-        "jsdoc-conf.json",
-        "npm-debug.log"
-      ],
+      "exclude": [".git", "jsdoc-conf.json", "npm-debug.log"],
       "excludeDir": [
         "./docs",
         "./test",

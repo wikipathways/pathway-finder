@@ -35,7 +35,8 @@ import { fromStream } from "mobx-utils";
 import { multiSort } from "./sort";
 
 const geneToPathways = require("../../build/gene-to-pathways.json");
-const miRNAToTargets = require("../../build/miRNA-to-targets.json");
+//const miRNAToTargets = require("../../build/miRNA-to-targets.json");
+const miRNAToTargets = require("../../build/inputs-to-targets.json");
 const pathwayDetails = require("../../build/pathway-details.json");
 
 // Needed for onTouchTap
@@ -280,28 +281,40 @@ const styles = {
 
 class PathwayStore {
   id = Math.random();
-  @observable elements = [];
-  @observable organism = "";
-  @observable name = "";
+  @observable
+  elements = [];
+  @observable
+  organism = "";
+  @observable
+  name = "";
 }
 
 export class PathwayFinderStore {
   id = Math.random();
-  @observable customStyle: any;
-  @observable database: string;
-  @observable identifiers: string[];
-  @observable pvjson: any;
-  @observable columns: IObservableArray<Column>;
-  @observable selectedPathway: any;
-  @observable labels: string[] = [];
-  @observable targetHighlighterSelected: any;
+  @observable
+  customStyle: any;
+  @observable
+  database: string;
+  @observable
+  identifiers: string[];
+  @observable
+  pvjson: any;
+  @observable
+  columns: IObservableArray<Column>;
+  @observable
+  selectedPathway: any;
+  @observable
+  labels: string[] = [];
+  @observable
+  targetHighlighterSelected: any;
   constructor({ id, customStyle = {} }) {
     this.customStyle = customStyle;
 
     const parsedQS = queryString.parse(location.search);
     if (!isEmpty(parsedQS)) {
-      const identifiers = (this.identifiers = (parsedQS.identifiers || "")
-        .split(","));
+      const identifiers = (this.identifiers = (
+        parsedQS.identifiers || ""
+      ).split(","));
       this.database = parsedQS.database;
     }
 
@@ -322,7 +335,7 @@ export class PathwayFinderStore {
       },
       {
         key: "miRNACount",
-        label: "miRNA Count",
+        label: "input Count",
         sortable: true,
         style: {
           width: "100px"
@@ -496,7 +509,6 @@ class PathwayFinder extends React.Component<any, any> {
                 flexFlow: "column wrap"
               }}
             >
-
               <TextField
                 hintText="Enter your inputs, one per line, e.g, hsa-miR-21-5p &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; hsa-miR-20a-5p"
                 multiLine={true}
@@ -520,47 +532,44 @@ class PathwayFinder extends React.Component<any, any> {
                 onClick={this.submitQuery}
                 label="Search"
               />
-
             </div>
 
-            {!data
-              ? null
-              : <DataTable
-                  columns={toJS(columns)}
-                  data={data}
-                  selectable={true}
-                  showCheckboxes={false}
-                  showRowHover={true}
-                  handleRowSelection={this.handleRowSelection}
-                />}
+            {!data ? null : (
+              <DataTable
+                columns={toJS(columns)}
+                data={data}
+                selectable={true}
+                showCheckboxes={false}
+                showRowHover={true}
+                handleRowSelection={this.handleRowSelection}
+              />
+            )}
           </div>
 
-          {!data
-            ? null
-            : <div
-                style={{
-                  display: "flex",
-                  flexFlow: "row"
-                }}
-              >
-                {!selectedPathway
-                  ? null
-                  : <iframe
-                      src={`https://www.wikipathways.org/wpi/PathwayWidget.php?id=${selectedPathway}${xrefAttribute}&colors=red`}
-                      width="800px"
-                      height="400px"
-                      style={{ overflow: "hidden" }}
-                    />}
-                {!!targetHighlighterData
-                  ? <TargetHighlighter
-                      data={targetHighlighterData}
-                      onControlClick={this.handleControlClick}
-                      selected={targetHighlighterSelected}
-                    />
-                  : null}
-
-              </div>}
-
+          {!data ? null : (
+            <div
+              style={{
+                display: "flex",
+                flexFlow: "row"
+              }}
+            >
+              {!selectedPathway ? null : (
+                <iframe
+                  src={`https://www.wikipathways.org/wpi/PathwayWidget.php?id=${selectedPathway}${xrefAttribute}&colors=red`}
+                  width="800px"
+                  height="400px"
+                  style={{ overflow: "hidden" }}
+                />
+              )}
+              {!!targetHighlighterData ? (
+                <TargetHighlighter
+                  data={targetHighlighterData}
+                  onControlClick={this.handleControlClick}
+                  selected={targetHighlighterSelected}
+                />
+              ) : null}
+            </div>
+          )}
         </div>
       </MuiThemeProvider>
     );
