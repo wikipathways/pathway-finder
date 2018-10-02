@@ -15,7 +15,7 @@
     "build:ts": "npm-run-all -p build:ts:*",
     "build:ts:es5": "tsc --project tsconfig.es5.json",
     "build:ts:esnext": "tsc --project tsconfig.esnext.json",
-		"postinstall": "npm run build && node ./es5/build-hash.js",
+    "postinstall": "npm run build && node ./es5/build-hash.js",
     "start-old": "npm-run-all -p start:mockserver start:webpack",
     "start-old:mockserver": "echo 'Do we need mockserver anymore?' &&./node_modules/mockserver/bin/mockserver.js -p 4522 -m './test/mockserver-data'",
     "start": "npm-run-all -p start:*",

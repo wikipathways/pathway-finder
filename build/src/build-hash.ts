@@ -1,3 +1,4 @@
+/// <reference path="../../csv-streamify.d.ts" />
 /// <reference path="../xlsx.d.ts" />
 
 // tsc --project tsconfig.build-hash.json && node ./build-hash.js
@@ -21,18 +22,24 @@ if (!global.hasOwnProperty("XMLHttpRequest")) {
 
 import * as fs from "fs";
 import { keys, toPairs, union } from "lodash";
+const csv = require("csv-streamify");
 import * as XLSX from "xlsx";
 import { Observable } from "rxjs/Observable";
 import { AjaxRequest } from "rxjs/observable/dom/AjaxObservable";
 import "rxjs/add/observable/dom/ajax";
 import "rxjs/add/observable/bindNodeCallback";
 import "rxjs/add/observable/concat";
+import "rxjs/add/observable/merge";
 import "rxjs/add/observable/from";
+import "rxjs/add/observable/pairs";
 import "rxjs/add/operator/do";
 import "rxjs/add/operator/let";
 import "rxjs/add/operator/map";
+import "rxjs/add/operator/mergeAll";
 import "rxjs/add/operator/mergeMap";
 import "rxjs/add/operator/reduce";
+import "rxjs/add/operator/shareReplay";
+import "rxjs/add/operator/toArray";
 import "rx-extra/add/operator/throughNodeStream";
 const fileExists = require("file-exists");
 const JSONStream = require("JSONStream");
@@ -42,6 +49,7 @@ const path = require("path");
  * Inputs
  ***************/
 const ORGANISMS = ["Homo sapiens", "Mus musculus"];
+const KINASE_TARGETS = path.resolve(__dirname, "../PF_I2T_Kinases.tsv");
 const MIRTARBASE_MTI_URL =
   "http://mirtarbase.mbc.nctu.edu.tw/cache/download/7.0/miRTarBase_MTI.xlsx";
 const GMT_HUMAN_URL =
@@ -69,6 +77,17 @@ const PATHWAY_DETAILS_FILEPATH = path.resolve(
   __dirname,
   "../pathway-details.json"
 );
+const INPUTS_TO_TARGETS_FILEPATH = path.resolve(
+  __dirname,
+  "../inputs-to-targets.json"
+);
+
+const CSV_OPTIONS = {
+  objectMode: true,
+  delimiter: "\t",
+  columns: true,
+  newline: "\r\n"
+};
 
 // TODO improve this to be more specify than "any"
 // TODO move this into rx-extra
@@ -94,16 +113,13 @@ Observable.prototype.toNodeStream = function(stream) {
   );
 };
 
+let miRNAToTargetsSource;
 if (!fileExists.sync(MIRNA_TO_TARGETS_FILEPATH)) {
   let miRTarBase_MTISource;
   if (fileExists.sync(MIRTARBASE_MTI_FILEPATH)) {
-    miRTarBase_MTISource = Observable.bindNodeCallback(function(
-      fp,
-      options,
-      cb
-    ) {
-      fs.readFile(fp, options, cb);
-    })(MIRTARBASE_MTI_FILEPATH, "utf8");
+    miRTarBase_MTISource = Observable.bindNodeCallback(function(fp, cb) {
+      fs.readFile(fp, cb);
+    })(MIRTARBASE_MTI_FILEPATH);
   } else {
     const ajaxRequest: AjaxRequest = {
       url: MIRTARBASE_MTI_URL,
@@ -112,37 +128,29 @@ if (!fileExists.sync(MIRNA_TO_TARGETS_FILEPATH)) {
       timeout: 1 * 1000, // ms
       crossDomain: true
     };
-    let first = true;
-    const miRTarBase_MTISourceArrayBuffer = Observable.ajax(ajaxRequest).map(
-      (ajaxResponse): ArrayBuffer => ajaxResponse.xhr.response
-    );
-
-    miRTarBase_MTISource = miRTarBase_MTISourceArrayBuffer.map(function(
-      arraybuffer
-    ) {
-      /* convert data to binary string */
-      var data = new Uint8Array(arraybuffer);
-      var arr = new Array();
-      for (var i = 0; i != data.length; ++i)
-        arr[i] = String.fromCharCode(data[i]);
-      return arr.join("");
-    });
-
-    miRTarBase_MTISourceArrayBuffer
-      .map(function(arraybuffer) {
-        // TODO should I need to do this?
-        // It's possibly I can just directly write the arraybuffer.
-        return Buffer.from(arraybuffer);
+    miRTarBase_MTISource = Observable.ajax(ajaxRequest)
+      .map((ajaxResponse): Buffer => Buffer.from(ajaxResponse.xhr.response))
+      .toArray()
+      .map(function(buffers) {
+        return Buffer.concat(buffers);
       })
-      .toNodeStream(fs.createWriteStream(MIRTARBASE_MTI_FILEPATH));
+      .shareReplay();
+
+    // cache spreadsheet so we don't have to download it again
+    miRTarBase_MTISource.toNodeStream(
+      fs.createWriteStream(MIRTARBASE_MTI_FILEPATH)
+    );
   }
 
-  const stringifyMiRNATargets = JSONStream.stringifyObject();
-  miRTarBase_MTISource
-    .map(function(bstr) {
+  miRNAToTargetsSource = miRTarBase_MTISource
+    .toArray()
+    .map(function(buffers) {
+      return Buffer.concat(buffers);
+    })
+    .map(function(buffer) {
       /* Call XLSX */
-      return XLSX.read(bstr, {
-        type: "binary",
+      return XLSX.read(buffer, {
+        type: "buffer",
         cellFormula: false,
         cellHTML: false,
         cellStyles: false
@@ -151,34 +159,64 @@ if (!fileExists.sync(MIRNA_TO_TARGETS_FILEPATH)) {
     .mergeMap(function(workbook) {
       const sheetName = workbook.SheetNames[0];
       const workSheet = workbook.Sheets[sheetName];
+
       return Observable.from(
-        toPairs(
-          XLSX.utils
-            .sheet_to_json(workSheet)
-            // only include "Functional MTI", not
-            // "Functional MTI (Weak)", "Non-Functional MTI" or "Non-Functional MTI (Weak)"
-            .filter(row => row["Support Type"] === "Functional MTI")
-            .map(row => ({
-              organism: row["Species (miRNA)"],
-              miRNA: row.miRNA,
-              target: row["Target Gene (Entrez ID)"]
-            }))
-            .filter(x => ORGANISMS.indexOf(x.organism) > -1)
-            .reduce(function(acc, x) {
-              const miRNA = x.miRNA;
-              const target = x.target;
-              const targets = (acc[miRNA] = acc[miRNA] || []);
-              if (targets.indexOf(target) === -1) {
-                targets.push(target);
-              }
-              return acc;
-            }, {})
-        )
+        XLSX.utils
+          .sheet_to_json(workSheet)
+          // only include "Functional MTI", not
+          // "Functional MTI (Weak)", "Non-Functional MTI" or "Non-Functional MTI (Weak)"
+          .filter(row => row["Support Type"] === "Functional MTI")
+          .map(row => ({
+            organism: row["Species (miRNA)"],
+            miRNA: row.miRNA,
+            target: row["Target Gene (Entrez ID)"]
+          }))
+          .filter(x => ORGANISMS.indexOf(x.organism) > -1)
       );
     })
+    .shareReplay();
+
+  const stringifyMiRNATargets = JSONStream.stringify();
+  miRNAToTargetsSource
     .throughNodeStream(stringifyMiRNATargets)
     .toNodeStream(fs.createWriteStream(MIRNA_TO_TARGETS_FILEPATH));
+} else {
+  miRNAToTargetsSource = Observable.bindNodeCallback(function(fp, options, cb) {
+    fs.readFile(fp, options, cb);
+  })(MIRNA_TO_TARGETS_FILEPATH, "utf8").throughNodeStream(
+    JSONStream.parse("*")
+  );
 }
+
+const kinaseToTargetSource = Observable.bindNodeCallback(function(
+  fp,
+  options,
+  cb
+) {
+  fs.readFile(fp, options, cb);
+})(KINASE_TARGETS, "utf8")
+  .throughNodeStream(csv(CSV_OPTIONS))
+  .map(function({ input, target }) {
+    return {
+      miRNA: input,
+      target
+    };
+  });
+
+const stringifyInputsToTargets = JSONStream.stringifyObject();
+Observable.merge(kinaseToTargetSource, miRNAToTargetsSource)
+  .reduce(function(acc: any, { miRNA, target }) {
+    const targets = (acc[miRNA] = acc[miRNA] || []);
+    if (targets.indexOf(target) === -1) {
+      targets.push(target);
+    }
+    return acc;
+  }, {})
+  .mergeMap(function(x) {
+    return Observable.from(toPairs(x));
+  })
+  .throughNodeStream(stringifyInputsToTargets)
+  .toNodeStream(fs.createWriteStream(INPUTS_TO_TARGETS_FILEPATH));
 
 let gmtSource;
 if (fileExists.sync(GMT_FILEPATH)) {
